@@ -3,7 +3,7 @@ import logging
 import time
 import re
 import random
-from config import USE_PROXY, PROXY_LIST
+from config import USE_PROXY
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
@@ -13,6 +13,21 @@ BASE_SEARCH_URL = "https://itunes.apple.com"
 
 # Cache for keyword suggestions
 _keyword_suggestions_cache = {}
+
+# Rate limiting variables
+_request_timestamps = []
+MAX_REQUESTS_PER_MINUTE = 20
+
+def _apply_rate_limit():
+    global _request_timestamps
+    _request_timestamps = [t for t in _request_timestamps if time.time() - t < 60] # Keep only last 60 seconds
+    
+    if len(_request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
+        time_to_wait = 60 - (time.time() - _request_timestamps[0])
+        if time_to_wait > 0:
+            logging.info(f"Rate limit hit. Waiting for {time_to_wait:.2f} seconds.")
+            time.sleep(time_to_wait)
+    _request_timestamps.append(time.time())
 
 def fetch_proxies_from_url(url):
     """
@@ -33,6 +48,8 @@ def _make_request(url, params=None, retry_count=0):
     A helper function to make requests to the API, handling errors and rate limiting.
     Supports proxy rotation if USE_PROXY is True and PROXY_LIST is not empty.
     """
+    _apply_rate_limit() # Apply rate limit before each request
+
     proxies = None
     if USE_PROXY and PROXY_LIST:
         proxy = random.choice(PROXY_LIST)
@@ -54,7 +71,7 @@ def _make_request(url, params=None, retry_count=0):
             retry_after = e.response.headers.get('Retry-After')
             if retry_after:
                 sleep_time = int(retry_after)
-                logging.warning(f"Rate limit hit or Forbidden (403). Retrying after {sleep_time} seconds...")
+                logging.warning(f"Rate limit hit or Forbidden (403). Retrying after {sleep_time} seconds.")
                 time.sleep(sleep_time)
                 if retry_count < 3: # Limit retries to prevent infinite loops
                     return _make_request(url, params, retry_count + 1)
