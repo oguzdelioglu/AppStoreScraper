@@ -13,4 +13,4 @@ env/
 .vscode/
 .idea/
 *.swp
-*.swo
+*.swooutputs/
