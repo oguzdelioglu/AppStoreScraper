@@ -132,14 +132,14 @@ def main():
     all_keywords_by_language = {}
     for _, row in df.iterrows():
         # Process MainKeywords
-        if row['MainKeywords'] and row['MainKeywords'] != 'N/A':
-            lang = row['Language'] if 'Language' in row and row['Language'] != 'N/A' else 'en-us' # Default to en-us
+        if isinstance(row['MainKeywords'], str) and row['MainKeywords'] != 'N/A':
+            lang = row['Language'] if 'Language' in row and isinstance(row['Language'], str) and row['Language'] != 'N/A' else 'en-us' # Default to en-us
             keywords = [k.strip() for k in row['MainKeywords'].split(',') if k.strip()]
             all_keywords_by_language.setdefault(lang, set()).update(keywords)
 
         # Process localized keywords
         for col in df.columns:
-            if col.startswith('Keywords_') and row[col] and row[col] != 'N/A':
+            if col.startswith('Keywords_') and isinstance(row[col], str) and row[col] != 'N/A':
                 lang = col.replace('Keywords_', '')
                 keywords = [k.strip() for k in row[col].split(',') if k.strip()]
                 all_keywords_by_language.setdefault(lang, set()).update(keywords)
