@@ -3,6 +3,9 @@ import gzip
 import xml.etree.ElementTree as ET
 import logging
 import time
+import os
+import tempfile
+import re
 
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
 
@@ -74,11 +77,21 @@ def get_all_app_urls_from_sitemaps(main_sitemap_url):
             logging.info(f"Downloading app sitemap from {sitemap_url}")
             gzipped_content = download_sitemap(sitemap_url)
             if gzipped_content:
+                # Create a temporary file to store the gzipped content
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.gz') as temp_gz_file:
+                    temp_gz_file.write(gzipped_content)
+                    temp_gz_file_path = temp_gz_file.name
+
                 try:
-                    decompressed_content = gzip.decompress(gzipped_content).decode('utf-8')
+                    with gzip.open(temp_gz_file_path, 'rt', encoding='utf-8') as f:
+                        decompressed_content = f.read()
                     app_data = parse_app_sitemap(decompressed_content)
                     all_app_urls.extend(app_data)
                     logging.info(f"Processed {len(app_data)} apps from {sitemap_url}")
                 except Exception as e:
                     logging.error(f"Failed to decompress or parse {sitemap_url}: {e}")
+                finally:
+                    # Delete the temporary gzipped file
+                    os.remove(temp_gz_file_path)
+                    logging.info(f"Deleted temporary file: {temp_gz_file_path}")
     return all_app_urls
