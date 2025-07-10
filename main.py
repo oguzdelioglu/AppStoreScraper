@@ -7,7 +7,7 @@ import concurrent.futures
 from src.itunes_api import fetch_proxies_from_url # get_keyword_suggestions removed
 from src.analysis import extract_keywords_from_text, is_app_considered_new, calculate_keyword_metrics
 from src.sitemap_parser import get_all_app_urls_from_sitemaps
-from src.app_scraper import scrape_app_details
+from src.app_scraper import extract_app_name_from_url
 from config import ONLY_POPULAR_COUNTRIES, POPULAR_COUNTRIES
 
 # Configure logging
@@ -48,18 +48,14 @@ def process_app_entry(app_entry):
     }
 
     # Process the main URL first (usually en-us or default)
-    main_app_details = scrape_app_details(base_app_url)
-    if main_app_details:
+    main_app_name = extract_app_name_from_url(base_app_url)
+    if main_app_name:
         country_code = "us" # Assuming main URL is for US or default
-        text_for_keywords = f"{main_app_details.get('app_name', '')} {main_app_details.get('description', '')}"
+        text_for_keywords = main_app_name # Use app name from URL as keyword source
         keywords = extract_keywords_from_text(text_for_keywords, country_code, num_keywords=3)
         
         app_data_row.update({
-            'MainAppName': main_app_details.get('app_name'),
-            'MainDeveloper': main_app_details.get('developer'),
-            'MainCategory': main_app_details.get('category'),
-            'MainReleaseDate': main_app_details.get('release_date'),
-            'MainPrice': main_app_details.get('price'),
+            'MainAppName': main_app_name,
             'MainKeywords': ', '.join(keywords)
         })
 
@@ -76,13 +72,13 @@ def process_app_entry(app_entry):
         if ONLY_POPULAR_COUNTRIES and country_code not in POPULAR_COUNTRIES:
             continue
 
-        localized_app_details = scrape_app_details(href_url)
-        if localized_app_details:
-            text_for_keywords = f"{localized_app_details.get('app_name', '')} {localized_app_details.get('description', '')}"
+        localized_app_name = extract_app_name_from_url(href_url)
+        if localized_app_name:
+            text_for_keywords = localized_app_name # Use app name from URL as keyword source
             keywords = extract_keywords_from_text(text_for_keywords, country_code, num_keywords=3)
             
             # Add localized data as new columns
-            app_data_row[f'AppName_{lang_code}'] = localized_app_details.get('app_name')
+            app_data_row[f'AppName_{lang_code}'] = localized_app_name
             app_data_row[f'Keywords_{lang_code}'] = ', '.join(keywords)
             app_data_row[f'URL_{lang_code}'] = href_url
 
