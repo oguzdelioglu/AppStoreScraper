@@ -6,7 +6,7 @@ import concurrent.futures
 
 from src.itunes_api import get_top_app_ids, get_keyword_suggestions, fetch_proxies_from_url
 from src.analysis import extract_keywords_from_text, is_app_considered_new, calculate_keyword_metrics
-from config import USE_PROXY, PROXY_LIST, PROXY_URL
+from config import USE_PROXY, PROXY_LIST, PROXY_URL, ONLY_POPULAR_COUNTRIES, POPULAR_COUNTRIES
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
