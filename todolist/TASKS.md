@@ -43,11 +43,8 @@ Bu modül, Apple'ın sunucularıyla tüm iletişimi yönetecek. Dış dünyaya a
     *   **İşlev:** iTunes Search API'nin `lookup` özelliğini kullanarak tek bir uygulamanın tüm detaylarını (isim, geliştirici, açıklama, yayınlanma tarihi, puan, kategori vb.) çekecek.
     *   **Çıktı:** Uygulama detaylarını içeren bir Python sözlüğü (`dict`).
 
-*   **Task 2.4: Anahtar Kelime Arama Sonucu Sayısını Alma Fonksiyonu**
-    *   `get_search_result_count(term, country)` adında bir fonksiyon tanımlanacak.
-    *   **Girdiler:** `term` (aranacak anahtar kelime), `country`.
-    *   **İşlev:** iTunes Search API'yi kullanarak bir anahtar kelime için arama yapacak ve sadece arama sonucu sayısını (`resultCount`) alacak. Bu, bizim "Tahmini Rekabet Yoğunluğu" metriğimiz olacak.
-    *   **Çıktı:** Bir tamsayı (`int`) (örn: `2451`).
+*   **Task 2.4: Anahtar Kelime Arama Sonucu Sayısını Alma Fonksiyonu (Kaldırıldı)**
+    *   Bu fonksiyon, iTunes Search API'sinden kaynaklanan 403 Forbidden hataları nedeniyle kaldırılmıştır. Anahtar kelime rekabet analizi şu an için doğrudan bu API üzerinden yapılamamaktadır.
 
 ### **Aşama 3: Analiz Motoru (`src/analysis.py`)**
 
@@ -63,6 +60,13 @@ Bu modül, API'den gelen ham veriyi işleyip anlamlı bilgilere dönüştürecek
     *   **İşlev:** API'den gelen yayınlanma tarihi metnini alıp Python'un `datetime` objesine çevirecek. Bugünün tarihi ile arasındaki farkı hesaplayacak. Fark `days_threshold`'dan küçükse `True` döndürecek.
     *   **Çıktı:** `True` veya `False`.
 
+*   **Task 3.3: Anahtar Kelime Metriklerini Hesaplama**
+    *   `calculate_keyword_metrics(input_data)` adında bir fonksiyon yazılacak.
+    *   **Girdiler:** `input_data` (anahtar kelime, otomatik tamamlama sıralaması, rakip uygulama sayısı, ortalama indirme sayısı, ortalama puan, ortalama yorum sayısı, reklam popülerlik puanı, başlık anahtar kelime bayrağı, otomatik tamamlama trendi gibi verileri içeren bir sözlük).
+    *   **İşlev:** Sağlanan formülleri kullanarak Volume, Competitive, Popularity, Quality, Top 10 Chance ve Opportunity Score metriklerini hesaplayacak.
+    *   **Çıktı:** Hesaplanan metrikleri içeren bir Python sözlüğü.
+    *   **ÖNEMLİ NOT:** Bu fonksiyonun ihtiyaç duyduğu girdi verileri (örneğin, `autocomplete_rank`, `competing_apps`, `avg_top10_downloads`) iTunes API'lerinden doğrudan elde edilemez. Bu verilerin manuel olarak sağlanması veya bu verileri sunan bir ASO aracının API'sine (eğer varsa ve erişiminiz varsa) entegrasyon düşünülmelidir.
+
 ### **Aşama 4: Ana Betik ve Kullanıcı Arayüzü (`main.py`)**
 
 Bu dosya, tüm parçaları bir araya getirip orkestrayı yönetecek ve kullanıcı ile etkileşime girecek.
@@ -75,6 +79,7 @@ Bu dosya, tüm parçaları bir araya getirip orkestrayı yönetecek ve kullanıc
     *   Bir `main()` fonksiyonu içinde tüm süreci yönetecek.
     *   `itunes_api.get_top_app_ids()` fonksiyonunu çağırarak en popüler uygulama ID'lerini alacak.
     *   Konsola "Liste çekildi, X uygulama bulundu. Analiz başlıyor..." gibi bir bilgi basacak.
+    *   **YENİ:** Sağlanan ülke kodları listesi üzerinde dönecek ve her ülke için analiz yapacak.
 
 *   **Task 4.3: Uygulama Analiz Döngüsü**
     *   Alınan her bir uygulama ID'si için bir `for` döngüsü başlatacak.
@@ -83,8 +88,9 @@ Bu dosya, tüm parçaları bir araya getirip orkestrayı yönetecek ve kullanıc
         2.  `itunes_api.get_app_details()` ile uygulamanın detaylarını çekecek.
         3.  `analysis.is_app_considered_new()` ile uygulamanın yeni olup olmadığını kontrol edecek.
         4.  `analysis.extract_keywords_from_text()` ile anahtar kelimeleri bulacak.
-        5.  Bulunan her anahtar kelime için `itunes_api.get_search_result_count()` ile rekabet yoğunluğunu ölçecek.
-        6.  Tüm bu bilgileri tek bir sözlükte toplayıp genel bir sonuç listesine ekleyecek.
+        5.  `itunes_api.get_keyword_suggestions()` ile anahtar kelime önerileri alacak ve bunları puanlarıyla birlikte kaydedecek. **(Hız sınırlama ve önbellekleme eklenecek)**
+        6.  **YENİ:** Her anahtar kelime için `analysis.calculate_keyword_metrics()` fonksiyonunu çağırarak özel metrikleri hesaplayacak ve bunları da kaydedecek.
+        7.  Tüm bu bilgileri tek bir sözlükte toplayıp genel bir sonuç listesine ekleyecek.
 
 *   **Task 4.4: Raporlama ve CSV Oluşturma**
     *   Döngü bittiğinde, konsola "Analiz tamamlandı. Rapor oluşturuluyor..." yazacak.
@@ -96,3 +102,13 @@ Bu dosya, tüm parçaları bir araya getirip orkestrayı yönetecek ve kullanıc
 
 *   **Task 5.1: README Dosyasını Güncelleme**
     *   `README.md` dosyasını projenin ne işe yaradığını, nasıl kurulacağını (`pip install -r requirements.txt`) ve nasıl çalıştırılacağını (`python main.py`) detaylı bir şekilde açıklayacak şekilde düzenleyecek.
+
+---
+
+### **ÖNEMLİ NOT: Anahtar Kelime Rekabeti ve Hacim Verileri**
+
+iTunes Search API'si, anahtar kelime önerileri için doğrudan bir uç nokta sağlamamaktadır ve arama sonuçları üzerinden yapılan otomatik sorgulamalar (örneğin, `itunes.apple.com/search` endpoint'i) sık sık `403 Client Error: Forbidden` hatasıyla karşılaşmaktadır. Bu durum, Apple'ın bu tür kullanımları engellediğini veya çok katı hız sınırlamaları uyguladığını göstermektedir.
+
+Ayrıca, anahtar kelime rekabet düzeyi ve arama hacmi gibi veriler, iTunes API'leri aracılığıyla doğrudan sağlanmamaktadır. Bu tür veriler genellikle SensorTower, App Annie gibi özel App Store Optimizasyonu (ASO) araçları tarafından sunulur. Bu araçların API'leri genellikle abonelik gerektirir ve kimlik doğrulama (örneğin, `X-Csrf-Token`, `cookie`) gerektirir. Bu kimlik doğrulama bilgileri, bu otomasyon tarafından programatik olarak elde edilemez veya yönetilemez.
+
+Bu nedenle, bu otomasyon şu anda anahtar kelime rekabeti ve arama hacmi gibi "değer" verilerini güvenilir bir şekilde sağlayamamaktadır. Gelecekte bu tür verilere ihtiyaç duyulursa, SensorTower gibi bir ASO aracının resmi API'sine (eğer varsa ve erişiminiz varsa) veya farklı bir veri kaynağına entegrasyon düşünülmelidir.

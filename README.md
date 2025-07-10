@@ -7,7 +7,6 @@ This project is a command-line tool designed to analyze the App Store's top char
 - **Real-time Top Chart Analysis:** Fetches data directly from the App Store for up-to-the-minute insights.
 - **Trend & New Discovery:** Identifies apps that are new to the charts or have been trending.
 - **Keyword Extraction:** Automatically suggests potential keywords based on app names and descriptions.
-- **Competition Estimation:** Measures how many other apps are competing for a specific keyword.
 - **CSV Reports:** Exports all findings into a clean, easy-to-read CSV file.
 
 ## How to Use
