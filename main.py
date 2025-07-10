@@ -4,12 +4,6 @@ from datetime import datetime
 import pandas as pd
 import concurrent.futures
 
-import logging
-import os
-from datetime import datetime
-import pandas as pd
-import concurrent.futures
-
 from src.itunes_api import get_top_app_ids, get_keyword_suggestions, fetch_proxies_from_url
 from src.analysis import extract_keywords_from_text, is_app_considered_new, calculate_keyword_metrics
 from config import USE_PROXY, PROXY_LIST, PROXY_URL
@@ -107,10 +101,10 @@ def main():
             logging.info(f"Updated PROXY_LIST with {len(PROXY_LIST)} proxies.")
         else:
             logging.warning("Could not fetch proxies. Continuing without proxies.")
-            # Optionally, set USE_PROXY to False here if you want to disable proxy usage entirely on failure
-            # config.USE_PROXY = False # This would require passing config as an object or making it mutable
 
-    for country_code in COUNTRY_CODES:
+    countries_to_analyze = POPULAR_COUNTRIES if ONLY_POPULAR_COUNTRIES else COUNTRY_CODES
+
+    for country_code in countries_to_analyze:
         logging.info(f"\n--- Starting analysis for country: {country_code.upper()} ---")
         country = country_code
         chart_id = "top-free"
