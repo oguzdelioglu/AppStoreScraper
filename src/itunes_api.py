@@ -3,7 +3,7 @@ import logging
 import time
 import re
 import random
-from config import USE_PROXY
+from config import USE_PROXY, PROXY_LIST, DEFAULT_RETRY_WAIT_TIME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
@@ -16,7 +16,7 @@ _keyword_suggestions_cache = {}
 
 # Rate limiting variables
 _request_timestamps = []
-MAX_REQUESTS_PER_MINUTE = 20
+MAX_REQUESTS_PER_MINUTE = 20 # Based on research for iTunes Search API
 
 def _apply_rate_limit():
     global _request_timestamps
@@ -25,7 +25,7 @@ def _apply_rate_limit():
     if len(_request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
         time_to_wait = 60 - (time.time() - _request_timestamps[0])
         if time_to_wait > 0:
-            logging.info(f"Rate limit hit. Waiting for {time_to_wait:.2f} seconds.")
+            logging.info(f"Rate limit hit. Waiting for {time_to_wait:.2f} seconds before next request.")
             time.sleep(time_to_wait)
     _request_timestamps.append(time.time())
 
@@ -69,20 +69,18 @@ def _make_request(url, params=None, retry_count=0):
     except requests.exceptions.RequestException as e:
         if isinstance(e, requests.exceptions.HTTPError) and (e.response.status_code == 429 or e.response.status_code == 403):
             retry_after = e.response.headers.get('Retry-After')
-            if retry_after:
+            sleep_time = DEFAULT_RETRY_WAIT_TIME
+            if retry_after and retry_after.isdigit():
                 sleep_time = int(retry_after)
-                logging.warning(f"Rate limit hit or Forbidden (403). Retrying after {sleep_time} seconds.")
-                time.sleep(sleep_time)
-                if retry_count < 3: # Limit retries to prevent infinite loops
-                    return _make_request(url, params, retry_count + 1)
-            else:
-                # For 403/429 without Retry-After, or if Retry-After is not a number, wait a default time
-                logging.warning(f"Rate limit hit or Forbidden (403). No Retry-After header. Retrying after 5 seconds...")
-                time.sleep(5)
-                if retry_count < 3:
-                    return _make_request(url, params, retry_count + 1)
+            logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time} seconds...")
+            time.sleep(sleep_time)
+            if retry_count < 3: # Limit retries to prevent infinite loops
+                return _make_request(url, params, retry_count + 1)
         logging.error(f"API request failed after retries: {e}")
         return None
+    finally:
+        # Add a small delay after each request to prevent hitting burst limits
+        time.sleep(0.5)
 
 def get_top_app_ids(country, media_type="apps", chart="top-free", limit=100):
     """
