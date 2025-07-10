@@ -16,7 +16,7 @@ def extract_keywords_from_text(text, country_code, num_keywords=5, min_len=3, ma
     words = re.findall(r'\b\w+\b', text.lower())
 
     # Filter out stop words and numeric-only words for single words
-    filtered_words = [word for word in words if word not in stop_words and not word.isdigit() and min_len <= len(word) <= max_len]
+    filtered_words = [word for word in words if word not in stop_words and not re.search(r'\d', word) and min_len <= len(word) <= max_len]
 
     # Generate bigrams and trigrams
     bigrams = [" ".join(words[i:i+2]) for i in range(len(words) - 1)]
@@ -24,14 +24,14 @@ def extract_keywords_from_text(text, country_code, num_keywords=5, min_len=3, ma
 
     # Filter out n-grams containing stop words or numeric-only words
     # An n-gram is considered a stop-word if any of its constituent words is a stop word
-    # or if it's entirely numeric.
+    # or if it's entirely numeric, or contains a digit.
     filtered_bigrams = [
         bg for bg in bigrams
-        if all(word not in stop_words and not word.isdigit() for word in bg.split())
+        if all(word not in stop_words and not re.search(r'\d', word) for word in bg.split())
     ]
     filtered_trigrams = [
         tg for tg in trigrams
-        if all(word not in stop_words and not word.isdigit() for word in tg.split())
+        if all(word not in stop_words and not re.search(r'\d', word) for word in tg.split())
     ]
 
     # Combine all candidate keywords
