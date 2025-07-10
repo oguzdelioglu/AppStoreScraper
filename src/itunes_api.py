@@ -70,14 +70,14 @@ def _make_request(url, params=None, retry_count=0):
     except requests.exceptions.RequestException as e:
         if isinstance(e, requests.exceptions.HTTPError) and (e.response.status_code == 429 or e.response.status_code == 403):
             retry_after = e.response.headers.get('Retry-After')
-            sleep_time = DEFAULT_RETRY_WAIT_TIME
+            sleep_time = DEFAULT_RETRY_WAIT_TIME * (2 ** retry_count)
             if retry_after and retry_after.isdigit():
-                sleep_time = int(retry_after)
-            logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time} seconds. URL: {url}")
+                sleep_time = max(sleep_time, int(retry_after))
+            logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time:.2f} seconds. URL: {url} (Proxy: {proxy if USE_PROXY and PROXY_LIST else 'None'})")
             time.sleep(sleep_time)
             if retry_count < 3: # Limit retries to prevent infinite loops
                 return _make_request(url, params, retry_count + 1)
-        logging.error(f"API request failed after retries: {e}. URL: {url}")
+        logging.error(f"API request failed after retries: {e}. URL: {url} (Proxy: {proxy if USE_PROXY and PROXY_LIST else 'None'})")
         return None
     finally:
         # Add a small delay after each request to prevent hitting burst limits
