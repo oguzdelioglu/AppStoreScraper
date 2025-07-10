@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime
 import pandas as pd
 import concurrent.futures
@@ -127,7 +128,9 @@ def main():
         final_cols = cols_order + sorted(keyword_cols) + sorted(keyword_metric_cols) + sorted(suggestion_cols) + sorted(suggestion_score_cols) + ['AppStoreLink']
         df = df[final_cols]
 
-        filename = f"outputs/AppStore_{chart_name.replace(' ', '_')}_{country.upper()}_{datetime.now().strftime('%Y-%m-%d')}.csv"
+        output_dir = f"outputs/{datetime.now().strftime('%Y-%m-%d')}"
+        os.makedirs(output_dir, exist_ok=True)
+        filename = f"{output_dir}/AppStore_{chart_name.replace(' ', '_')}_{country.upper()}_{datetime.now().strftime('%Y-%m-%d')}.csv"
         df.to_csv(filename, index=False)
         logging.info(f"Report successfully saved as '{filename}'")
 
