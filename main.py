@@ -4,7 +4,13 @@ from datetime import datetime
 import pandas as pd
 import concurrent.futures
 
-from src.itunes_api import get_top_app_ids, get_app_details, get_keyword_suggestions, fetch_proxies_from_url
+import logging
+import os
+from datetime import datetime
+import pandas as pd
+import concurrent.futures
+
+from src.itunes_api import get_top_app_ids, get_keyword_suggestions, fetch_proxies_from_url
 from src.analysis import extract_keywords_from_text, is_app_considered_new, calculate_keyword_metrics
 from config import USE_PROXY, PROXY_LIST, PROXY_URL
 
@@ -26,16 +32,17 @@ COUNTRY_CODES = [
     'bj', 'am', 'gh', 'mo', 'ml', 'ms', 'bs', 'ec', 'al'
 ]
 
-def process_app(app_id, country, rank):
-    details = get_app_details(app_id, country)
-    if not details:
-        logging.warning(f"Could not fetch details for app ID {app_id} in {country}. Skipping.")
+def process_app(app_data, country, rank):
+    # app_id = app_data.get('id') # Not needed as app_data is already the full data
+    if not app_data:
+        logging.warning(f"Could not process app data for rank {rank} in {country}. Skipping.")
         return None
 
-    app_name = details.get('trackName', 'N/A')
+    app_name = app_data.get('name', 'N/A') # Use 'name' from RSS feed
     logging.info(f"Analyzing: {app_name} in {country}")
 
-    text_for_keywords = f"{details.get('trackName', '')} {details.get('description', '')}"
+    # Combine relevant text sources for keyword extraction from RSS feed data
+    text_for_keywords = f"{app_data.get('name', '')} {app_data.get('artistName', '')} {app_data.get('genres', [{}])[0].get('name', '')}"
     keywords = extract_keywords_from_text(text_for_keywords, country, num_keywords=3)
 
     keyword_data = {}
@@ -73,19 +80,19 @@ def process_app(app_id, country, rank):
         keyword_data[f'Suggestion {k+1}'] = suggestion_item['keyword']
         keyword_data[f'Suggestion {k+1} Score'] = suggestion_item['score']
 
-    status = "New Discovery" if is_app_considered_new(details.get('releaseDate')) else "Trending"
+    status = "New Discovery" if is_app_considered_new(app_data.get('releaseDate')) else "Trending"
 
     return {
         "Rank": rank,
         "AppName": app_name,
-        "Developer": details.get('artistName', 'N/A'),
-        "Category": details.get('primaryGenreName', 'N/A'),
-        "Rating": details.get('averageUserRating', 0),
-        "RatingCount": details.get('userRatingCount', 0),
-        "ReleaseDate": details.get('releaseDate', 'N/A').split('T')[0],
+        "Developer": app_data.get('artistName', 'N/A'),
+        "Category": app_data.get('genres', [{}])[0].get('name', 'N/A'),
+        "Rating": app_data.get('averageUserRating', 0), # Note: averageUserRating and userRatingCount are not directly available in RSS feed, will be 0
+        "RatingCount": app_data.get('userRatingCount', 0), # Note: averageUserRating and userRatingCount are not directly available in RSS feed, will be 0
+        "ReleaseDate": app_data.get('releaseDate', 'N/A').split('T')[0],
         "Status": status,
-        "Price": details.get('formattedPrice', 'N/A'),
-        "AppStoreLink": details.get('trackViewUrl', 'N/A'),
+        "Price": app_data.get('formattedPrice', 'N/A'),
+        "AppStoreLink": app_data.get('url', 'N/A'), # Use 'url' from RSS feed
         **keyword_data
     }
 
@@ -109,17 +116,17 @@ def main():
         chart_id = "top-free"
         chart_name = "Top Free Apps"
 
-        app_ids = get_top_app_ids(country, chart=chart_id)
+        app_data_list = get_top_app_ids(country, chart=chart_id)
 
-        if not app_ids:
+        if not app_data_list:
             logging.error(f"Could not retrieve app list for {country_code.upper()}. Skipping this country.")
             continue
 
-        logging.info(f"List fetched, {len(app_ids)} apps found for {country_code.upper()}. Starting analysis...")
+        logging.info(f"List fetched, {len(app_data_list)} apps found for {country_code.upper()}. Starting analysis...")
 
         all_app_data = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_app = {executor.submit(process_app, app_id, country, i + 1): app_id for i, app_id in enumerate(app_ids)}
+            future_to_app = {executor.submit(process_app, app_data, country, i + 1): app_data for i, app_data in enumerate(app_data_list)}
             for future in concurrent.futures.as_completed(future_to_app):
                 app_data = future.result()
                 if app_data:
