@@ -150,8 +150,8 @@ def main():
             f.write(f"""--- Language: {lang} ---
 """)
             for keyword in sorted(list(keywords_set)):
-                f.write(f"{keyword}
-")
+                f.write(f"""{keyword}
+""")
             f.write("\n")
     logging.info(f"All keywords saved to '{keywords_filename}'")
 
