@@ -1,54 +1,22 @@
 from datetime import datetime, timedelta
 import re
 import math
+from src.stopwords import get_stopwords_for_country
 
-# A comprehensive list of common English stop words. Using a set for efficient lookups.
-STOP_WORDS = {
-    'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'of', 'at', 'by', 'for', 'with',
-    'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below',
-    'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then',
-    'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few',
-    'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
-    'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now', 'd', 'll', 'm',
-    'o', 're', 've', 'y', 'ain', 'aren', 'couldn', 'didn', 'doesn', 'hadn', 'hasn', 'haven', 'isn',
-    'ma', 'mightn', 'mustn', 'needn', 'shan', 'shouldn', 'wasn', 'weren', 'won', 'wouldn', 'your',
-    'you', 'app', 'apps', 'get', 'we', 'our', 'us', 'is', 'are', 'it', 'its', 'this', 'that', 'these',
-    'those', 'has', 'have', 'had', 'do', 'does', 'did', 'was', 'were', 'be', 'been', 'being', 'i',
-    'me', 'my', 'myself', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its',
-    'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this',
-    'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has',
-    'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or',
-    'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between',
-    'into', 'through', 'during', 'before', 'after', 'above', 'below', 'from', 'up', 'down', 'in',
-    'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when',
-    'where', 'why', 'how',
-    'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some',
-    'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can',
-    'will', 'just', 'don', 'should', 'now', 'd', 'll', 'm', 'o', 're', 've', 'y', 'ain', 'aren',
-    'couldn', 'didn', 'doesn', 'hadn', 'hasn', 'haven', 'isn', 'ma', 'mightn', 'mustn', 'needn',
-    'shan', 'shouldn', 'wasn', 'weren', 'won', 'wouldn', 'app', 'apps', 'game', 'games', 'mobile',
-    'phone', 'user', 'users', 'play', 'playing', 'new', 'best', 'top', 'free', 'paid', 'version',
-    'update', 'updates', 'feature', 'features', 'experience', 'time', 'world', 'story', 'level',
-    'levels', 'challenge', 'challenges', 'fun', 'enjoy', 'great', 'good', 'amazing', 'awesome',
-    'fantastic', 'super', 'cool', 'easy', 'simple', 'addictive', 'download', 'install', 'get',
-    'make', 'made', 'like', 'love', 'much', 'many', 'little', 'big', 'small', 'long', 'short',
-    'first', 'second', 'third', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight',
-    'nine', 'ten', 'hundred', 'thousand', 'million', 'billion', 'trillion', 'etc', 'etcetera',
-    'example', 'examples', 'e.g', 'i.e', 'vs', 'via'
-}
-
-def extract_keywords_from_text(text, num_keywords=5):
+def extract_keywords_from_text(text, country_code, num_keywords=5, min_len=3, max_len=25):
     """
     Extracts the most frequent, non-stop-word single words, bigrams, and trigrams from a given text.
     """
     if not text or not isinstance(text, str):
         return []
 
+    stop_words = get_stopwords_for_country(country_code)
+
     # Find all words, convert to lower case
     words = re.findall(r'\b\w+\b', text.lower())
 
     # Filter out stop words and numeric-only words for single words
-    filtered_words = [word for word in words if word not in STOP_WORDS and not word.isdigit()]
+    filtered_words = [word for word in words if word not in stop_words and not word.isdigit() and min_len <= len(word) <= max_len]
 
     # Generate bigrams and trigrams
     bigrams = [" ".join(words[i:i+2]) for i in range(len(words) - 1)]
@@ -59,11 +27,11 @@ def extract_keywords_from_text(text, num_keywords=5):
     # or if it's entirely numeric.
     filtered_bigrams = [
         bg for bg in bigrams
-        if all(word not in STOP_WORDS and not word.isdigit() for word in bg.split())
+        if all(word not in stop_words and not word.isdigit() for word in bg.split())
     ]
     filtered_trigrams = [
         tg for tg in trigrams
-        if all(word not in STOP_WORDS and not word.isdigit() for word in tg.split())
+        if all(word not in stop_words and not word.isdigit() for word in tg.split())
     ]
 
     # Combine all candidate keywords
