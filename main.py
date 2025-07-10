@@ -147,8 +147,8 @@ def main():
     keywords_filename = f"{current_run_output_dir}/All_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
     with open(keywords_filename, 'w', encoding='utf-8') as f:
         for lang, keywords_set in sorted(all_keywords_by_language.items()):
-            f.write(f"--- Language: {lang} ---
-")
+            f.write(f"""--- Language: {lang} ---
+""")
             for keyword in sorted(list(keywords_set)):
                 f.write(f"{keyword}
 ")
