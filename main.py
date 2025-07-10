@@ -30,32 +30,38 @@ COUNTRY_CODES = [
 
 MAIN_SITEMAP_URL = "https://apps.apple.com/sitemaps_apps_index_app_1.xml"
 
-def process_app_for_keywords(app_entry):
+def process_app_entry(app_entry):
     app_id = app_entry.get('app_id')
-    app_url = app_entry.get('url')
+    base_app_url = app_entry.get('url')
     hreflangs = app_entry.get('hreflangs', [])
 
-    all_keyword_data = []
+    # Initialize a dictionary for the current app's data
+    app_data_row = {
+        'AppID': app_id,
+        'BaseAppURL': base_app_url,
+        'MainAppName': 'N/A',
+        'MainDeveloper': 'N/A',
+        'MainCategory': 'N/A',
+        'MainReleaseDate': 'N/A',
+        'MainPrice': 'N/A',
+        'MainKeywords': 'N/A'
+    }
 
     # Process the main URL first (usually en-us or default)
-    main_app_details = scrape_app_details(app_url)
+    main_app_details = scrape_app_details(base_app_url)
     if main_app_details:
         country_code = "us" # Assuming main URL is for US or default
         text_for_keywords = f"{main_app_details.get('app_name', '')} {main_app_details.get('description', '')}"
         keywords = extract_keywords_from_text(text_for_keywords, country_code, num_keywords=3)
         
-        keyword_entry = {
-            'AppID': app_id,
-            'AppURL': app_url,
-            'AppName': main_app_details.get('app_name'),
-            'Developer': main_app_details.get('developer'),
-            'Category': main_app_details.get('category'),
-            'ReleaseDate': main_app_details.get('release_date'),
-            'Price': main_app_details.get('price'),
-            'Language': 'en-us', # Assuming main is en-us
-            'Keywords': ', '.join(keywords)
-        }
-        all_keyword_data.append(keyword_entry)
+        app_data_row.update({
+            'MainAppName': main_app_details.get('app_name'),
+            'MainDeveloper': main_app_details.get('developer'),
+            'MainCategory': main_app_details.get('category'),
+            'MainReleaseDate': main_app_details.get('release_date'),
+            'MainPrice': main_app_details.get('price'),
+            'MainKeywords': ', '.join(keywords)
+        })
 
     # Process hreflang URLs
     for hreflang_entry in hreflangs:
@@ -63,8 +69,8 @@ def process_app_for_keywords(app_entry):
         href_url = hreflang_entry['href']
         
         # Extract country code from hreflang (e.g., en-us -> us)
-        country_code_match = lang_code.split('-')
-        country_code = country_code_match[1].lower() if len(country_code_match) == 2 else 'N/A'
+        country_code_parts = lang_code.split('-')
+        country_code = country_code_parts[1].lower() if len(country_code_parts) == 2 else 'N/A'
 
         # Skip if not a popular country and ONLY_POPULAR_COUNTRIES is True
         if ONLY_POPULAR_COUNTRIES and country_code not in POPULAR_COUNTRIES:
@@ -75,25 +81,15 @@ def process_app_for_keywords(app_entry):
             text_for_keywords = f"{localized_app_details.get('app_name', '')} {localized_app_details.get('description', '')}"
             keywords = extract_keywords_from_text(text_for_keywords, country_code, num_keywords=3)
             
-            keyword_entry = {
-                'AppID': app_id,
-                'AppURL': href_url,
-                'AppName': localized_app_details.get('app_name'),
-                'Developer': localized_app_details.get('developer'),
-                'Category': localized_app_details.get('category'),
-                'ReleaseDate': localized_app_details.get('release_date'),
-                'Price': localized_app_details.get('price'),
-                'Language': lang_code,
-                'Keywords': ', '.join(keywords)
-            }
-            all_keyword_data.append(keyword_entry)
+            # Add localized data as new columns
+            app_data_row[f'AppName_{lang_code}'] = localized_app_details.get('app_name')
+            app_data_row[f'Keywords_{lang_code}'] = ', '.join(keywords)
+            app_data_row[f'URL_{lang_code}'] = href_url
 
-    return all_keyword_data
+    return app_data_row
 
 def main():
     """Main function to run the App Store analysis."""
-    # Proxy fetching logic removed as proxies are no longer used in main.py
-
     countries_to_analyze = POPULAR_COUNTRIES if ONLY_POPULAR_COUNTRIES else COUNTRY_CODES
 
     current_run_output_dir = f"outputs/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
@@ -107,17 +103,13 @@ def main():
 
     logging.info(f"Found {len(all_app_urls)} app URLs from sitemaps. Starting analysis...")
 
-    # Filter app_urls by country if ONLY_POPULAR_COUNTRIES is True
-    # This filtering will now happen inside process_app_for_keywords for hreflangs
-    # For the main URL, we assume it's always processed.
-    
     all_processed_data = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor: # Reduced max_workers for scraping
-        future_to_app_entry = {executor.submit(process_app_for_keywords, app_entry): app_entry for app_entry in all_app_urls}
+        future_to_app_entry = {executor.submit(process_app_entry, app_entry): app_entry for app_entry in all_app_urls}
         for future in concurrent.futures.as_completed(future_to_app_entry):
             processed_data_for_app = future.result()
             if processed_data_for_app:
-                all_processed_data.extend(processed_data_for_app)
+                all_processed_data.append(processed_data_for_app)
 
     if not all_processed_data:
         logging.error(f"No data was analyzed. Could not generate a report.")
@@ -126,9 +118,15 @@ def main():
     logging.info(f"Analysis complete. Generating report...")
     df = pd.DataFrame(all_processed_data)
 
-    # Define columns for the final report
-    final_cols = ['AppID', 'AppURL', 'AppName', 'Developer', 'Category', 'ReleaseDate', 'Price', 'Language', 'Keywords']
-    df = df[final_cols]
+    # Dynamically create final_cols based on available data
+    dynamic_cols = ['AppID', 'BaseAppURL', 'MainAppName', 'MainDeveloper', 'MainCategory', 'MainReleaseDate', 'MainPrice', 'MainKeywords']
+    
+    # Add localized columns that were actually generated
+    for col in df.columns:
+        if col.startswith(('AppName_', 'Keywords_', 'URL_')) and col not in dynamic_cols:
+            dynamic_cols.append(col)
+
+    df = df[dynamic_cols]
 
     filename = f"{current_run_output_dir}/AppStore_Localized_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     df.to_csv(filename, index=False)
