@@ -69,8 +69,7 @@ def process_app_entry(app_entry):
         country_code = country_code_parts[1].lower() if len(country_code_parts) == 2 else 'N/A'
 
         # Skip if not a popular country and ONLY_POPULAR_COUNTRIES is True
-        if ONLY_POPULAR_COUNTRIES and country_code not in POPULAR_COUNTRIES:
-            continue
+        # Removed country filtering here to process all localized URLs
 
         localized_app_name = extract_app_name_from_url(href_url)
         if localized_app_name:
@@ -86,10 +85,10 @@ def process_app_entry(app_entry):
 
 def main():
     """Main function to run the App Store analysis."""
-    countries_to_analyze = POPULAR_COUNTRIES if ONLY_POPULAR_COUNTRIES else COUNTRY_CODES
+    countries_to_analyze = COUNTRY_CODES # Always analyze all countries from sitemap
 
     current_run_output_dir = f"outputs/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
-    os.makedirs(current_run_output_dir, exist_ok=True)
+    os.makedirs(current_run_output_dir, exist_ok=True);
 
     all_app_urls = get_all_app_urls_from_sitemaps(MAIN_SITEMAP_URL)
 
@@ -128,31 +127,33 @@ def main():
     df.to_csv(filename, index=False)
     logging.info(f"Report successfully saved as '{filename}'")
 
-    # Aggregate and save all keywords by language
-    all_keywords_by_language = {}
+    # Aggregate and save all keywords by language in CSV format
+    all_keywords_for_csv = []
     for _, row in df.iterrows():
         # Process MainKeywords
         if isinstance(row['MainKeywords'], str) and row['MainKeywords'] != 'N/A':
             lang = row['Language'] if 'Language' in row and isinstance(row['Language'], str) and row['Language'] != 'N/A' else 'en-us' # Default to en-us
             keywords = [k.strip() for k in row['MainKeywords'].split(',') if k.strip()]
-            all_keywords_by_language.setdefault(lang, set()).update(keywords)
+            for keyword in keywords:
+                all_keywords_for_csv.append({'keyword': keyword, 'language': lang})
 
         # Process localized keywords
         for col in df.columns:
             if col.startswith('Keywords_') and isinstance(row[col], str) and row[col] != 'N/A':
                 lang = col.replace('Keywords_', '')
                 keywords = [k.strip() for k in row[col].split(',') if k.strip()]
-                all_keywords_by_language.setdefault(lang, set()).update(keywords)
+                for keyword in keywords:
+                    all_keywords_for_csv.append({'keyword': keyword, 'language': lang})
 
-    keywords_filename = f"{current_run_output_dir}/All_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
-    with open(keywords_filename, 'w', encoding='utf-8') as f:
-        for lang, keywords_set in sorted(all_keywords_by_language.items()):
-            f.write(f"""--- Language: {lang} ---
-""")
-            for keyword in sorted(list(keywords_set)):
-                f.write(f"""{keyword}
-""")
-            f.write("\n")
+    # Create a DataFrame from the aggregated keywords and save as CSV
+    keywords_df = pd.DataFrame(all_keywords_for_csv)
+    # Remove duplicates based on keyword and language
+    keywords_df.drop_duplicates(subset=['keyword', 'language'], inplace=True)
+    # Sort by language and then keyword
+    keywords_df.sort_values(by=['language', 'keyword'], inplace=True)
+
+    keywords_filename = f"{current_run_output_dir}/All_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+    keywords_df.to_csv(keywords_filename, index=False)
     logging.info(f"All keywords saved to '{keywords_filename}'")
 
 if __name__ == "__main__":
