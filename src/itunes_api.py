@@ -13,6 +13,7 @@ BASE_SEARCH_URL = "https://itunes.apple.com"
 
 # Cache for keyword suggestions
 _keyword_suggestions_cache = {}
+_country_keyword_cache = {}
 
 # Rate limiting variables
 _request_timestamps = []
@@ -86,8 +87,6 @@ def get_top_app_ids(country, media_type="apps", chart="top-free", limit=100):
     """
     Fetches the top app IDs from the Apple RSS feed.
     """
-    # Corrected URL structure based on search results:
-    # https://rss.applemarketingtools.com/api/v2/{country}/{media_type}/{chart}/{limit}/{genre}.json
     url = f"{BASE_RSS_URL}/{country}/{media_type}/{chart}/{limit}/apps.json"
     
     logging.info(f"Fetching top {limit} apps from {country}/{chart}...")
@@ -101,32 +100,6 @@ def get_top_app_ids(country, media_type="apps", chart="top-free", limit=100):
     logging.error("Could not parse top apps feed.")
     return []
 
-def get_app_details(app_id, country):
-    """
-    Fetches detailed information for a specific app using its ID.
-    """
-    url = f"{BASE_SEARCH_URL}/lookup"
-    params = {"id": app_id, "country": country}
-    
-    data = _make_request(url, params)
-    
-    if data and data.get("resultCount") > 0:
-        return data["results"][0]
-    return None
-
-def get_app_details(app_id, country):
-    """
-    Fetches detailed information for a specific app using its ID.
-    """
-    url = f"{BASE_SEARCH_URL}/lookup"
-    params = {"id": app_id, "country": country}
-    
-    data = _make_request(url, params)
-    
-    if data and data.get("resultCount") > 0:
-        return data["results"][0]
-    return None
-
 def clean_keyword(keyword):
     """
     Removes special characters from a keyword, keeping only alphanumeric and spaces.
@@ -139,10 +112,13 @@ def get_keyword_suggestions(term, country='us', limit=10):
     Generates single words and two-word combinations, cleans them, and scores them.
     Uses caching to avoid redundant API calls.
     """
-    cache_key = (term, country, limit)
-    if cache_key in _keyword_suggestions_cache:
-        logging.info(f"Returning keyword suggestions for \"{term}\" from cache.")
-        return _keyword_suggestions_cache[cache_key]
+    # Check country-specific cache first
+    if country not in _country_keyword_cache:
+        _country_keyword_cache[country] = {}
+
+    if term in _country_keyword_cache[country]:
+        logging.info(f"Returning keyword suggestions for \"{term}\" in {country} from country-specific cache.")
+        return _country_keyword_cache[country][term]
 
     logging.info(f"Fetching keyword suggestions for term: \"{term}\", country: {country}, limit: {limit}")
     
@@ -214,7 +190,5 @@ def get_keyword_suggestions(term, country='us', limit=10):
         "suggestions": scored_suggestions[:20], # Top 20 suggestions
         "count": len(scored_suggestions)
     }
-    _keyword_suggestions_cache[cache_key] = result
+    _country_keyword_cache[country][term] = result # Store in country-specific cache
     return result
-
-
