@@ -17,15 +17,15 @@ COUNTRY_CODES = [
     'cn', 'co', 'mw', 'sk', 'rw', 'to', 'kg', 'gw', 'pa', 'uy', 'xk', 'sn', 'sv', 'mr', 'fi',
     'is', 'tz', 'st', 'pk', 'dz', 'si', 'bo', 'bz', 'mm', 'ga', 'la', 'zw', 'sl', 'fj', 'by',
     'hu', 'lr', 'za', 'th', 'ao', 'lb', 'jo', 'ne', 'ly', 'hn', 'sc', 'tr', 'dk', 'vg', 'ch',
-    'gr', 'tj', 'bm', 'pw', 'lc', 'id', 'vu', 'pg', 'ca', 'jm', 'ai', 'at', 'jp', 'ar', 'bb',
-    'de', 'ag', 'gm', 'ky', 'mn', 'bf', 'ye', 'es', 'td', 'my', 'no', 'vc', 'ni', 'ph', 'ke',
-    'fm', 'tn', 'ro', 'kz', 'az', 'hr', 'il', 'tt', 'mv', 'eg', 'ng', 'cv', 'br', 'tc', 'be',
-    'ug', 'bt', 'kw', 'fr', 'om', 'lu', 'pt', 'cl', 'np', 'lt', 'iq', 'na', 'ci', 'tm', 'ba',
-    'bg', 'mx', 'cm', 'ma', 'cr', 'cg', 'rs', 'me', 'mt', 'tw', 've', 'nz', 'gb', 'zm', 'nr',
-    'mg', 'bn', 'mz', 'kh', 'do', 'py', 'vn', 'gt', 'dm', 'ee', 'ua', 'kn', 'kr', 'cz', 'us',
-    'cy', 'gy', 'sz', 'mu', 'pe', 'qa', 'sr', 'au', 'lv', 'sa', 'cd', 'sb', 'it', 'af', 'uz',
-    'md', 'in', 'nl', 'pl', 'hk', 'bh', 'sg', 'bw', 'mk', 'gd', 'ae', 'lk', 'se', 'ru', 'ie',
-    'bj', 'am', 'gh', 'mo', 'ml', 'ms', 'bs', 'ec', 'al'
+    'gr', 'tj', 'bm', 'pw', 'lc', 'id', 'vu', 'pg', 'ca', 'jm', 'ai', 'at', 'jp', 'ar
+    'bb', 'de', 'ag', 'gm', 'ky', 'mn', 'bf', 'ye', 'es', 'td', 'my', 'no', 'vc', 'ni', 'ph',
+    'ke', 'fm', 'tn', 'ro', 'kz', 'az', 'hr', 'il', 'tt', 'mv', 'eg', 'ng', 'cv', 'br', 'tc',
+    'be', 'ug', 'bt', 'kw', 'fr', 'om', 'lu', 'pt', 'cl', 'np', 'lt', 'iq', 'na', 'ci', 'tm',
+    'ba', 'bg', 'mx', 'cm', 'ma', 'cr', 'cg', 'rs', 'me', 'mt', 'tw', 've', 'nz', 'gb', 'zm',
+    'nr', 'mg', 'bn', 'mz', 'kh', 'do', 'py', 'vn', 'gt', 'dm', 'ee', 'ua', 'kn', 'kr', 'cz',
+    'us', 'cy', 'gy', 'sz', 'mu', 'pe', 'qa', 'sr', 'au', 'lv', 'sa', 'cd', 'sb', 'it', 'af',
+    'uz', 'md', 'in', 'nl', 'pl', 'hk', 'bh', 'sg', 'bw', 'mk', 'gd', 'ae', 'lk', 'se', 'ru',
+    'ie', 'bj', 'am', 'gh', 'mo', 'ml', 'ms', 'bs', 'ec', 'al'
 ]
 
 MAIN_SITEMAP_URL = "https://apps.apple.com/sitemaps_apps_index_app_1.xml"
@@ -127,6 +127,33 @@ def main():
     filename = f"{current_run_output_dir}/AppStore_Localized_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
     df.to_csv(filename, index=False)
     logging.info(f"Report successfully saved as '{filename}'")
+
+    # Aggregate and save all keywords by language
+    all_keywords_by_language = {}
+    for _, row in df.iterrows():
+        # Process MainKeywords
+        if row['MainKeywords'] and row['MainKeywords'] != 'N/A':
+            lang = row['Language'] if 'Language' in row and row['Language'] != 'N/A' else 'en-us' # Default to en-us
+            keywords = [k.strip() for k in row['MainKeywords'].split(',') if k.strip()]
+            all_keywords_by_language.setdefault(lang, set()).update(keywords)
+
+        # Process localized keywords
+        for col in df.columns:
+            if col.startswith('Keywords_') and row[col] and row[col] != 'N/A':
+                lang = col.replace('Keywords_', '')
+                keywords = [k.strip() for k in row[col].split(',') if k.strip()]
+                all_keywords_by_language.setdefault(lang, set()).update(keywords)
+
+    keywords_filename = f"{current_run_output_dir}/All_Keywords_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.txt"
+    with open(keywords_filename, 'w', encoding='utf-8') as f:
+        for lang, keywords_set in sorted(all_keywords_by_language.items()):
+            f.write(f"--- Language: {lang} ---
+")
+            for keyword in sorted(list(keywords_set)):
+                f.write(f"{keyword}
+")
+            f.write("\n")
+    logging.info(f"All keywords saved to '{keywords_filename}'")
 
 if __name__ == "__main__":
     try:
