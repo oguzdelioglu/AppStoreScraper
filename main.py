@@ -4,8 +4,9 @@ from datetime import datetime
 import pandas as pd
 import concurrent.futures
 
-from src.itunes_api import get_top_app_ids, get_app_details, get_keyword_suggestions
+from src.itunes_api import get_top_app_ids, get_app_details, get_keyword_suggestions, fetch_proxies_from_url
 from src.analysis import extract_keywords_from_text, is_app_considered_new, calculate_keyword_metrics
+from config import USE_PROXY, PROXY_LIST, PROXY_URL
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
@@ -90,6 +91,18 @@ def process_app(app_id, country, rank):
 
 def main():
     """Main function to run the App Store analysis."""
+    if USE_PROXY and PROXY_URL:
+        logging.info(f"Fetching proxies from {PROXY_URL}...")
+        fetched_proxies = fetch_proxies_from_url(PROXY_URL)
+        if fetched_proxies:
+            PROXY_LIST.clear()
+            PROXY_LIST.extend(fetched_proxies)
+            logging.info(f"Updated PROXY_LIST with {len(PROXY_LIST)} proxies.")
+        else:
+            logging.warning("Could not fetch proxies. Continuing without proxies.")
+            # Optionally, set USE_PROXY to False here if you want to disable proxy usage entirely on failure
+            # config.USE_PROXY = False # This would require passing config as an object or making it mutable
+
     for country_code in COUNTRY_CODES:
         logging.info(f"\n--- Starting analysis for country: {country_code.upper()} ---")
         country = country_code

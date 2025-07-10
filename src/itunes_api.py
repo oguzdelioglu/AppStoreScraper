@@ -2,6 +2,8 @@ import requests
 import logging
 import time
 import re
+import random
+from config import USE_PROXY, PROXY_LIST
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
@@ -12,12 +14,36 @@ BASE_SEARCH_URL = "https://itunes.apple.com"
 # Cache for keyword suggestions
 _keyword_suggestions_cache = {}
 
+def fetch_proxies_from_url(url):
+    """
+    Fetches a list of proxies from the given URL.
+    """
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        proxies = [p.strip() for p in response.text.splitlines() if p.strip()]
+        logging.info(f"Fetched {len(proxies)} proxies from {url}")
+        return proxies
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Failed to fetch proxies from {url}: {e}")
+        return []
+
 def _make_request(url, params=None, retry_count=0):
     """
     A helper function to make requests to the API, handling errors and rate limiting.
+    Supports proxy rotation if USE_PROXY is True and PROXY_LIST is not empty.
     """
+    proxies = None
+    if USE_PROXY and PROXY_LIST:
+        proxy = random.choice(PROXY_LIST)
+        proxies = {
+            "http": proxy,
+            "https": proxy,
+        }
+        logging.info(f"Using proxy: {proxy}")
+
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, timeout=10, proxies=proxies)
         response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
         return response.json()
     except requests.exceptions.RequestException as e:
