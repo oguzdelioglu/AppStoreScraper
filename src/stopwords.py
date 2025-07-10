@@ -7,10 +7,201 @@ STOPWORDS = {
 }
 
 COUNTRY_TO_LANG = {
-    'tr': 'tr',
-    'de': 'de',
-    'es': 'es',
-    # Add more country to language mappings here
+    'af': 'ps',  # Pashto, Dari
+    'al': 'sq',  # Albanian
+    'dz': 'ar',  # Arabic
+    'ad': 'ca',  # Catalan
+    'ao': 'pt',  # Portuguese
+    'ag': 'en',  # English
+    'ar': 'es',  # Spanish
+    'am': 'hy',  # Armenian
+    'au': 'en',  # English
+    'at': 'de',  # German
+    'az': 'az',  # Azerbaijani
+    'bs': 'en',  # English
+    'bh': 'ar',  # Arabic
+    'bd': 'bn',  # Bengali
+    'bb': 'en',  # English
+    'by': 'be',  # Belarusian
+    'be': 'nl',  # Dutch, French, German
+    'bz': 'en',  # English
+    'bj': 'fr',  # French
+    'bt': 'dz',  # Dzongkha
+    'bo': 'es',  # Spanish
+    'ba': 'bs',  # Bosnian
+    'bw': 'en',  # English
+    'br': 'pt',  # Portuguese
+    'bn': 'ms',  # Malay
+    'bg': 'bg',  # Bulgarian
+    'bf': 'fr',  # French
+    'bi': 'fr',  # French
+    'kh': 'km',  # Khmer
+    'cm': 'fr',  # French, English
+    'ca': 'en',  # English, French
+    'cv': 'pt',  # Portuguese
+    'cf': 'fr',  # French
+    'td': 'fr',  # French
+    'cl': 'es',  # Spanish
+    'cn': 'zh',  # Chinese
+    'co': 'es',  # Spanish
+    'km': 'ar',  # Arabic, French
+    'cg': 'fr',  # French
+    'cd': 'fr',  # French
+    'cr': 'es',  # Spanish
+    'hr': 'hr',  # Croatian
+    'cu': 'es',  # Spanish
+    'cy': 'el',  # Greek, Turkish
+    'cz': 'cs',  # Czech
+    'dk': 'da',  # Danish
+    'dj': 'fr',  # French, Arabic
+    'dm': 'en',  # English
+    'do': 'es',  # Spanish
+    'ec': 'es',  # Spanish
+    'eg': 'ar',  # Arabic
+    'sv': 'es',  # Spanish
+    'gq': 'es',  # Spanish, French, Portuguese
+    'er': 'ti',  # Tigrinya, Arabic, English
+    'ee': 'et',  # Estonian
+    'sz': 'en',  # English, Swazi
+    'et': 'am',  # Amharic
+    'fj': 'en',  # English, Fijian, Hindi
+    'fi': 'fi',  # Finnish
+    'fr': 'fr',  # French
+    'ga': 'fr',  # French
+    'gm': 'en',  # English
+    'ge': 'ka',  # Georgian
+    'de': 'de',  # German
+    'gh': 'en',  # English
+    'gr': 'el',  # Greek
+    'gd': 'en',  # English
+    'gt': 'es',  # Spanish
+    'gn': 'fr',  # French
+    'gw': 'pt',  # Portuguese
+    'gy': 'en',  # English
+    'ht': 'fr',  # French, Haitian Creole
+    'hn': 'es',  # Spanish
+    'hu': 'hu',  # Hungarian
+    'is': 'is',  # Icelandic
+    'in': 'hi',  # Hindi, English
+    'id': 'id',  # Indonesian
+    'ir': 'fa',  # Persian
+    'iq': 'ar',  # Arabic, Kurdish
+    'ie': 'en',  # English, Irish
+    'il': 'he',  # Hebrew
+    'it': 'it',  # Italian
+    'jm': 'en',  # English
+    'jp': 'ja',  # Japanese
+    'jo': 'ar',  # Arabic
+    'kz': 'kk',  # Kazakh, Russian
+    'ke': 'sw',  # Swahili, English
+    'ki': 'en',  # English
+    'kw': 'ar',  # Arabic
+    'kg': 'ky',  # Kyrgyz, Russian
+    'la': 'lo',  # Lao
+    'lv': 'lv',  # Latvian
+    'lb': 'ar',  # Arabic
+    'ls': 'en',  # English, Sesotho
+    'lr': 'en',  # English
+    'ly': 'ar',  # Arabic
+    'li': 'de',  # German
+    'lt': 'lt',  # Lithuanian
+    'lu': 'fr',  # French, German, Luxembourgish
+    'mg': 'fr',  # French, Malagasy
+    'mw': 'en',  # English, Chichewa
+    'my': 'ms',  # Malay
+    'mv': 'dv',  # Dhivehi
+    'ml': 'fr',  # French
+    'mt': 'mt',  # Maltese, English
+    'mh': 'en',  # English, Marshallese
+    'mr': 'ar',  # Arabic
+    'mu': 'en',  # English, French
+    'mx': 'es',  # Spanish
+    'fm': 'en',  # English
+    'md': 'ro',  # Romanian
+    'mc': 'fr',  # French
+    'mn': 'mn',  # Mongolian
+    'me': 'sr-ME',# Montenegrin
+    'ma': 'ar',  # Arabic
+    'mz': 'pt',  # Portuguese
+    'mm': 'my',  # Burmese
+    'na': 'en',  # English
+    'nr': 'en',  # English, Nauruan
+    'np': 'ne',  # Nepali
+    'nl': 'nl',  # Dutch
+    'nz': 'en',  # English, Maori
+    'ni': 'es',  # Spanish
+    'ne': 'fr',  # French
+    'ng': 'en',  # English
+    'kp': 'ko',  # Korean
+    'mk': 'mk',  # Macedonian
+    'no': 'no',  # Norwegian
+    'om': 'ar',  # Arabic
+    'pk': 'ur',  # Urdu, English
+    'pw': 'en',  # English, Palauan
+    'pa': 'es',  # Spanish
+    'pg': 'en',  # English, Tok Pisin, Hiri Motu
+    'py': 'es',  # Spanish, Guarani
+    'pe': 'es',  # Spanish
+    'ph': 'en',  # English, Filipino
+    'pl': 'pl',  # Polish
+    'pt': 'pt',  # Portuguese
+    'qa': 'ar',  # Arabic
+    'ro': 'ro',  # Romanian
+    'ru': 'ru',  # Russian
+    'rw': 'rw',  # Kinyarwanda, French, English
+    'kn': 'en',  # English
+    'lc': 'en',  # English
+    'vc': 'en',  # English
+    'ws': 'sm',  # Samoan, English
+    'sm': 'it',  # Italian
+    'st': 'pt',  # Portuguese
+    'sa': 'ar',  # Arabic
+    'sn': 'fr',  # French
+    'rs': 'sr',  # Serbian
+    'sc': 'fr',  # French, English, Seychellois Creole
+    'sl': 'en',  # English
+    'sg': 'en',  # English, Malay, Mandarin, Tamil
+    'sk': 'sk',  # Slovak
+    'si': 'sl',  # Slovenian
+    'sb': 'en',  # English
+    'so': 'so',  # Somali, Arabic
+    'za': 'en',  # English, Afrikaans, Zulu, Xhosa, etc.
+    'kr': 'ko',  # Korean
+    'ss': 'en',  # English
+    'es': 'es',  # Spanish
+    'lk': 'si',  # Sinhala, Tamil
+    'sd': 'ar',  # Arabic, English
+    'sr': 'nl',  # Dutch
+    'se': 'sv',  # Swedish
+    'ch': 'de',  # German, French, Italian
+    'sy': 'ar',  # Arabic
+    'tw': 'zh',  # Chinese
+    'tj': 'tg',  # Tajik
+    'tz': 'sw',  # Swahili, English
+    'th': 'th',  # Thai
+    'tl': 'pt',  # Portuguese, Tetum
+    'tg': 'fr',  # French
+    'to': 'en',  # English, Tongan
+    'tt': 'en',  # English
+    'tn': 'ar',  # Arabic
+    'tr': 'tr',  # Turkish
+    'tm': 'tk',  # Turkmen
+    'tv': 'en',  # English, Tuvaluan
+    'ug': 'en',  # English, Swahili
+    'ua': 'uk',  # Ukrainian
+    'ae': 'ar',  # Arabic
+    'gb': 'en',  # English
+    'us': 'en',  # English
+    'uy': 'es',  # Spanish
+    'uz': 'uz',  # Uzbek
+    'vu': 'en',  # English, Bislama, French
+    'va': 'it',  # Italian, Latin
+    've': 'es',  # Spanish
+    'vn': 'vi',  # Vietnamese
+    'ye': 'ar',  # Arabic
+    'zm': 'en',  # English
+    'zw': 'en',  # English, Shona, Ndebele
+    'xk': 'sq', # Albanian
 }
 
 def get_stopwords_for_country(country_code):
