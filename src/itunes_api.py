@@ -16,7 +16,7 @@ _keyword_suggestions_cache = {}
 
 # Rate limiting variables
 _request_timestamps = []
-MAX_REQUESTS_PER_MINUTE = 20 # Based on research for iTunes Search API
+MAX_REQUESTS_PER_MINUTE = 10 # Adjusted based on observed stricter limits
 
 def _apply_rate_limit():
     global _request_timestamps
@@ -25,7 +25,7 @@ def _apply_rate_limit():
     if len(_request_timestamps) >= MAX_REQUESTS_PER_MINUTE:
         time_to_wait = 60 - (time.time() - _request_timestamps[0])
         if time_to_wait > 0:
-            logging.info(f"Rate limit hit. Waiting for {time_to_wait:.2f} seconds before next request.")
+            logging.info(f"Rate limit hit. Waiting for {time_to_wait:.2f} seconds before next request. (Current requests in last minute: {len(_request_timestamps)})")
             time.sleep(time_to_wait)
     _request_timestamps.append(time.time())
 
@@ -72,15 +72,15 @@ def _make_request(url, params=None, retry_count=0):
             sleep_time = DEFAULT_RETRY_WAIT_TIME
             if retry_after and retry_after.isdigit():
                 sleep_time = int(retry_after)
-            logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time} seconds...")
+            logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time} seconds. URL: {url}")
             time.sleep(sleep_time)
             if retry_count < 3: # Limit retries to prevent infinite loops
                 return _make_request(url, params, retry_count + 1)
-        logging.error(f"API request failed after retries: {e}")
+        logging.error(f"API request failed after retries: {e}. URL: {url}")
         return None
     finally:
         # Add a small delay after each request to prevent hitting burst limits
-        time.sleep(0.5)
+        time.sleep(1)
 
 def get_top_app_ids(country, media_type="apps", chart="top-free", limit=100):
     """
@@ -95,11 +95,24 @@ def get_top_app_ids(country, media_type="apps", chart="top-free", limit=100):
     data = _make_request(url)
     
     if data and "feed" in data and "results" in data["feed"]:
-        app_ids = [app["id"] for app in data["feed"]["results"]]
-        logging.info(f"Successfully fetched {len(app_ids)} app IDs.")
-        return app_ids
+        apps = data["feed"]["results"]
+        logging.info(f"Successfully fetched {len(apps)} app data.")
+        return apps
     logging.error("Could not parse top apps feed.")
     return []
+
+def get_app_details(app_id, country):
+    """
+    Fetches detailed information for a specific app using its ID.
+    """
+    url = f"{BASE_SEARCH_URL}/lookup"
+    params = {"id": app_id, "country": country}
+    
+    data = _make_request(url, params)
+    
+    if data and data.get("resultCount") > 0:
+        return data["results"][0]
+    return None
 
 def get_app_details(app_id, country):
     """
