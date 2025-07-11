@@ -15,3 +15,5 @@ env/
 *.swp
 *.swooutputs/
 .DS_Store
+
+outputs

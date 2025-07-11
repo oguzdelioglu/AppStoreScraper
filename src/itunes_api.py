@@ -3,7 +3,7 @@ import logging
 import time
 import re
 import random
-from config import USE_PROXY, PROXY_LIST, DEFAULT_RETRY_WAIT_TIME
+from config import USE_PROXY, DEFAULT_RETRY_WAIT_TIME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='> %(message)s')
@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='> %(message)s')
 BASE_RSS_URL = "https://rss.applemarketingtools.com/api/v2"
 BASE_SEARCH_URL = "https://itunes.apple.com"
 
-# Cache for keyword suggestions
+# Cache for keyword suggestions (no longer used for iTunes Search API)
 _keyword_suggestions_cache = {}
 _country_keyword_cache = {}
 
@@ -72,7 +72,7 @@ def _make_request(url, params=None, retry_count=0):
             retry_after = e.response.headers.get('Retry-After')
             sleep_time = DEFAULT_RETRY_WAIT_TIME * (2 ** retry_count)
             if retry_after and retry_after.isdigit():
-                sleep_time = max(sleep_time, int(retry_after))
+                sleep_time = int(retry_after)
             logging.warning(f"Rate limit hit or Forbidden ({e.response.status_code}). Retrying after {sleep_time:.2f} seconds. URL: {url} (Proxy: {proxy if USE_PROXY and PROXY_LIST else 'None'})")
             time.sleep(sleep_time)
             if retry_count < 3: # Limit retries to prevent infinite loops
@@ -105,90 +105,3 @@ def clean_keyword(keyword):
     Removes special characters from a keyword, keeping only alphanumeric and spaces.
     """
     return re.sub(r'[^a-zA-Z0-9\s]', '', keyword).strip()
-
-def get_keyword_suggestions(term, country='us', limit=10):
-    """
-    Fetches app names from iTunes Search API based on a term to use as suggestions.
-    Generates single words and two-word combinations, cleans them, and scores them.
-    Uses caching to avoid redundant API calls.
-    """
-    # Check country-specific cache first
-    if country not in _country_keyword_cache:
-        _country_keyword_cache[country] = {}
-
-    if term in _country_keyword_cache[country]:
-        logging.info(f"Returning keyword suggestions for \"{term}\" in {country} from country-specific cache.")
-        return _country_keyword_cache[country][term]
-
-    logging.info(f"Fetching keyword suggestions for term: \"{term}\", country: {country}, limit: {limit}")
-    
-    url = f"{BASE_SEARCH_URL}/search"
-    params = {
-        "term": term,
-        "country": country,
-        "limit": limit,
-        "entity": "software"  # Search for software (apps)
-    }
-    logging.info(f"Making request to: {url} with params: {params}")
-    
-    data = _make_request(url, params)
-    
-    suggestions = set()
-    if data and data.get("resultCount") > 0:
-        apps = data["results"]
-        logging.info(f"Found {len(apps)} apps in search results")
-        
-        for app in apps:
-            if "trackName" in app:
-                words = app["trackName"].lower().split()
-                
-                # Single words
-                for word in words:
-                    if len(word) > 3:
-                        clean_word = clean_keyword(word)
-                        if len(clean_word) > 3:
-                            suggestions.add(clean_word)
-                
-                # Two-word combinations (bigrams)
-                for i in range(len(words) - 1):
-                    if len(words[i]) > 2 and len(words[i+1]) > 2:
-                        phrase = f"{words[i]} {words[i+1]}"
-                        clean_phrase = clean_keyword(phrase)
-                        if len(clean_phrase) > 3:
-                            suggestions.add(clean_phrase)
-    
-    logging.info(f"Generated {len(suggestions)} unique keyword suggestions")
-    
-    scored_suggestions = []
-    for suggestion in suggestions:
-        # Length score
-        word_count = len(suggestion.split())
-        if word_count == 2:
-            length_score = 100
-        elif word_count == 3:
-            length_score = 90
-        elif word_count == 1:
-            length_score = 80
-        else:
-            length_score = 70
-        
-        # Match score
-        match_score = 100 if term.lower() in suggestion.lower() else 50
-        
-        # Total score
-        total_score = round((length_score + match_score) / 2)
-        
-        scored_suggestions.append({
-            "keyword": suggestion,
-            "score": total_score
-        })
-    
-    # Sort by score in descending order
-    scored_suggestions.sort(key=lambda x: x["score"], reverse=True)
-    
-    result = {
-        "suggestions": scored_suggestions[:20], # Top 20 suggestions
-        "count": len(scored_suggestions)
-    }
-    _country_keyword_cache[country][term] = result # Store in country-specific cache
-    return result
